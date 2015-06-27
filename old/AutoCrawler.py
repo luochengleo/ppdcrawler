@@ -184,10 +184,18 @@ if login():
     tempCount = 0
     while True:
         latestpage = int(getLatestPage())
+        print 'Current Url:',ppdaiurl
         getData_ppdai(ppdaiurl, filedirectory, latestpage+1,)
         time.sleep(SLEEP_TIME)
         '''
         tempCount += 1
         if(tempCount > 400):
             break
-        '''
+#         '''
+
+# createFolder(filedirectory)
+# createFolder(filedirectory+dataFolder)
+# createFolder(filedirectory+userFolder)
+# getProxyList()
+# if login():
+#     print 'hello world'

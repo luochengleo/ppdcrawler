@@ -20,14 +20,14 @@ ENABLE_PROXY = True #是否使用代理
 
 MAX_PAGE = int(10000000)
 
-ppdaiurl = u'http://www.ppdai.com/list/'
+ppdaiurl = u'http://www.ppdai.com/loan/list/'
 ppdai_user_url = u'http://www.ppdai.com/user/'
 
 #记录相关
 logfileName = 'log'
 configfileName = 'config'
 datafilePrefix = 'data_sheet'
-filedirectory = u'D:\\datas\\pythondatas\\ppdailist\\'
+filedirectory = u'../ppdailist/'
 dataFolder = u'pages/' #保存订单的文件夹名字
 userFolder = u'users/' #保存用户的文件夹名字
 
