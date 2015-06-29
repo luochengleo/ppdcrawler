@@ -69,6 +69,8 @@ def getData_ppdai(url, filedirectory, begin_page, end_page=MAX_PAGE):
             m = response.read()
             lastpage = i
         except (urllib2.URLError) as e:
+            if hasattr(e, 'code'):
+                print 'ERROR CODE',e.code
             if hasattr(e, 'code') and e.code == 404:
                 lostPageCount = lostPageCount + 1
                 if(lostPageCount > LOST_PAGE_LIMIT):
@@ -115,7 +117,7 @@ def getData_ppdai(url, filedirectory, begin_page, end_page=MAX_PAGE):
         f.write(m)
         f.close()
 
-        '''使用BeautifulSoup分析网页'''
+        '''使用BeautifulSoup分析网页
         analyzeData_ppdai(i, m, writers)
         
         fileCount = fileCount + 1
@@ -132,7 +134,9 @@ def getData_ppdai(url, filedirectory, begin_page, end_page=MAX_PAGE):
     #resultExcel.save(filedirectory+'result_'+str(begin_page)+'_'+str(end_page)+'.'+strtime+'.xls')
     
     #logfile.close()
-    
+
+    '''
+
     for i in range(5):
         files[i].close()
         
@@ -143,24 +147,16 @@ def getData_ppdai(url, filedirectory, begin_page, end_page=MAX_PAGE):
 
 #--------------------------------------------------
 def getLatestPage():
-    try:
-        logfile = open(filedirectory+logfileName, 'r')
-        line = logfile.readline()
-        
-        pattern = re.compile(u'\s*(LatestPage)\s*=\s*(\d+)\s*')
-        m = pattern.match(line)
-        latestPage = 651850 #default
-        if m:
-            latestPage =  m.group(2)
-        logfile.close()
-    except:
-        latestPage = 460000
-        #创建log文件
-        logfile = open(filedirectory+logfileName, 'wb')
-        logfile.write('LatestPage = '+str(latestPage))
-        logfile.close()
-        
-    return latestPage
+    rtr = 460000
+    import os
+    for f in os.listdir('datas/pages'):
+        if 'html' in f:
+            _,id, _ = f.split('_')
+            if id.isdigit():
+                if int(id) > rtr:
+                    rtr = int(id)
+
+    return rtr
 
 #--------------------------------------------------
 #main
@@ -184,14 +180,11 @@ if login():
     tempCount = 0
     while True:
         latestpage = int(getLatestPage())
+        print 'Lastest Page',latestpage
         print 'Current Url:',ppdaiurl
         getData_ppdai(ppdaiurl, filedirectory, latestpage+1,)
         time.sleep(SLEEP_TIME)
-        '''
-        tempCount += 1
-        if(tempCount > 400):
-            break
-#         '''
+
 
 # createFolder(filedirectory)
 # createFolder(filedirectory+dataFolder)

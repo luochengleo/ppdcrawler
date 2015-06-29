@@ -20,7 +20,7 @@ ENABLE_PROXY = True #是否使用代理
 
 MAX_PAGE = int(10000000)
 
-ppdaiurl = u'http://www.ppdai.com/loan/list/'
+ppdaiurl = u'http://invest.ppdai.com/loan/info?id='
 ppdai_user_url = u'http://www.ppdai.com/user/'
 
 #记录相关
@@ -149,7 +149,7 @@ def getProxyList(proxy = None):
 #--------------------------------------------------
 def setProxy(proxyList):
     if ENABLE_PROXY:
-        proxy_handler = urllib2.ProxyHandler({"http": '111.206.81.248:80'})
+        proxy_handler = urllib2.ProxyHandler({"http": '127.0.0.1:80'})
         opener = urllib2.build_opener(proxy_handler)
         urllib2.install_opener(opener)
 #--------------------------------------------------
