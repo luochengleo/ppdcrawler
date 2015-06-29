@@ -16,7 +16,7 @@ headers={'Referer':'http://www.ppdai.com/default.htm','User-Agent': 'Mozilla/5.0
 rows_sheet = [2, 1, 2, 1, 1] #5个sheet当前最后一行
 writers = [] #csv writers[0-4]
 
-def getData_ppdai(url, filedirectory, begin_page, end_page=MAX_PAGE):
+def getData_ppdai(url, filedirectory, begin_page, end_page,mod):
     global rows_sheet
     global writers
 
@@ -39,11 +39,11 @@ def getData_ppdai(url, filedirectory, begin_page, end_page=MAX_PAGE):
         flag_newfile = True
         if os.path.isfile(name_sheet):
             flag_newfile = False
-            
+
         file_sheet = open(name_sheet, 'ab')
         files.append(file_sheet)
         file_sheet.write('\xEF\xBB\xBF') #防止windows下excel打开显示乱码
-        
+
         writer_sheet = csv.writer(file_sheet)
         writers.append(writer_sheet)
         if flag_newfile:
@@ -54,88 +54,70 @@ def getData_ppdai(url, filedirectory, begin_page, end_page=MAX_PAGE):
     
     
     for i in range(begin_page, end_page+1):
-        lastlastpage = lastpage #用于判断lastpage是否更新
-        req = urllib2.Request(url+str(i), None, getRandomHeaders())
-        try:
-            #response = responseFromUrl(url+str(i))
-            #req.set_proxy(proxyList[0], 'http')
-            response = urllib2.urlopen(req)
-            #部分页面会重定向到/default.html，（如400001），以此来判定
-            r = re.search(str(i), response.geturl())
-            if not r:
-                print(str(i)+': Page Redirected!')
-                continue
-            
-            m = response.read()
-            lastpage = i
-        except (urllib2.URLError) as e:
-            if hasattr(e, 'code'):
-                print 'ERROR CODE',e.code
-            if hasattr(e, 'code') and e.code == 404:
-                lostPageCount = lostPageCount + 1
-                if(lostPageCount > LOST_PAGE_LIMIT):
-                    print('YOU HAVE GOT THE LASTEST PAGE!')
-                    break
-                else:
-                    continue #only a few pages are lost
-            elif hasattr(e, 'code') and e.code == 403:
-                login()
-                i = lastpage
-                continue
-            else:
+        if i not in FINISHED_ID and i %4 ==mod:
+            lastlastpage = lastpage #用于判断lastpage是否更新
+            req = urllib2.Request(url+str(i), None, getRandomHeaders())
+            try:
+                #response = responseFromUrl(url+str(i))
+                #req.set_proxy(proxyList[0], 'http')
+                response = urllib2.urlopen(req)
+                #部分页面会重定向到/default.html，（如400001），以此来判定
+                r = re.search(str(i), response.geturl())
+                if not r:
+                    print(str(i)+': Page Redirected!')
+                    continue
+
+                m = response.read()
+                lastpage = i
+            except (urllib2.URLError) as e:
                 if hasattr(e, 'code'):
-                    print(str(e.code)+': '+str(e.reason))
+                    print 'ERROR CODE',e.code
+                if hasattr(e, 'code') and e.code == 404:
+                    lostPageCount = lostPageCount + 1
+                    if(lostPageCount > LOST_PAGE_LIMIT):
+                        print('YOU HAVE GOT THE LASTEST PAGE!')
+                        break
+                    else:
+                        continue #only a few pages are lost
+                elif hasattr(e, 'code') and e.code == 403:
+                    login()
+                    i = lastpage
+                    continue
                 else:
-                    print(str(e.reason))
-                i = lastpage
+                    if hasattr(e, 'code'):
+                        print(str(e.code)+': '+str(e.reason))
+                    else:
+                        print(str(e.reason))
+                    i = lastpage
+                    continue
+            except socket.error as e:
+                print('[ERROR] Socket error: '+str(e.errno))
+                if e.errno == 10054: #被服务器端强行关闭
+                    print('[ERROR] Socket was closed by the server.\n Trying to reconnect...')
+                #将最新页面写入log文件中
+                logfile = open(filedirectory+logfileName, 'wb')
+                logfile.write('LatestPage = '+str(lastpage))
+                logfile.close()
+                #等待一定时间后重新连接
+                time.sleep(CLOSE_WAIT_TIME)
+                login()
+                i = lastpage #重新获取最新页面
                 continue
-        except socket.error as e:
-            print('[ERROR] Socket error: '+str(e.errno))
-            if e.errno == 10054: #被服务器端强行关闭
-                print('[ERROR] Socket was closed by the server.\n Trying to reconnect...')
-            #将最新页面写入log文件中
-            logfile = open(filedirectory+logfileName, 'wb')
-            logfile.write('LatestPage = '+str(lastpage))
-            logfile.close()
-            #等待一定时间后重新连接
-            time.sleep(CLOSE_WAIT_TIME)
-            login()
-            i = lastpage #重新获取最新页面
-            continue
-            
-        #end try&except
-        response.close()
-        lostPageCount = 0
-        
-        '''writing files'''
-        strtime = str(time.strftime('%Y%m%d%H%M', time.localtime(time.time())))
-        sName = filedirectory + dataFolder + 'order_'  + str(i).zfill(LIST_LENGTH) +'_'+strtime+ '.html'
-        print('Downloading ' + str(i) + ' web page...')
-        
-        #保存网页文件
-        f = open(sName, 'wb')
-        f.write(m)
-        f.close()
 
-        '''使用BeautifulSoup分析网页
-        analyzeData_ppdai(i, m, writers)
-        
-        fileCount = fileCount + 1
-        
-        #将最新页面写入log文件中
-        if lastpage != lastlastpage:
-            logfile = open(filedirectory+logfileName, 'wb')
-            logfile.write('LatestPage = '+str(lastpage))
-            logfile.close()
-        
-        time.sleep(GAP_TIME)
-    #endfor
+            #end try&except
+            response.close()
+            lostPageCount = 0
 
-    #resultExcel.save(filedirectory+'result_'+str(begin_page)+'_'+str(end_page)+'.'+strtime+'.xls')
-    
-    #logfile.close()
+            '''writing files'''
+            strtime = str(time.strftime('%Y%m%d%H%M', time.localtime(time.time())))
+            sName = filedirectory + dataFolder + 'order_'  + str(i).zfill(LIST_LENGTH) +'_'+strtime+ '.html'
+            print('Downloading ' + str(i) + ' web page...')
 
-    '''
+            #保存网页文件
+            f = open(sName, 'wb')
+            f.write(m)
+            f.close()
+
 
     for i in range(5):
         files[i].close()
@@ -157,7 +139,14 @@ def getLatestPage():
                     rtr = int(id)
 
     return rtr
-
+def getFinishedId():
+    FINISHED_ID = set()
+    for f in os.listdir('datas/pages'):
+        if 'html' in f:
+            _,id, _ = f.split('_')
+            if id.isdigit():
+                FINISHED_ID.add(int(id))
+    return FINISHED_ID
 #--------------------------------------------------
 #main
 reload(sys)
@@ -174,6 +163,16 @@ createFolder(filedirectory+dataFolder)
 createFolder(filedirectory+userFolder)
 getProxyList()
 
+
+
+FINISHED_ID = getFinishedId()
+
+import sys
+b_idx = int(sys.argv[1])
+
+e_idx = int(sys.argv[2])
+
+mod = int(sys.argv[3])
 print('Data Path: '+filedirectory)
 if login():
     #setProxy()
@@ -182,13 +181,5 @@ if login():
         latestpage = int(getLatestPage())
         print 'Lastest Page',latestpage
         print 'Current Url:',ppdaiurl
-        getData_ppdai(ppdaiurl, filedirectory, latestpage+1,)
+        getData_ppdai(ppdaiurl, filedirectory, b_idx,e_idx,mod)
         time.sleep(SLEEP_TIME)
-
-
-# createFolder(filedirectory)
-# createFolder(filedirectory+dataFolder)
-# createFolder(filedirectory+userFolder)
-# getProxyList()
-# if login():
-#     print 'hello world'
