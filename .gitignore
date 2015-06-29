@@ -1,7 +1,8 @@
 *.bat
 *.sh
-
+*.pyc
 .idea
+*.csv
 .DS_Store
 *.html
 archieve*
