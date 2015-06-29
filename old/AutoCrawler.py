@@ -54,7 +54,7 @@ def getData_ppdai(url, filedirectory, begin_page, end_page,mod):
     
     
     for i in range(begin_page, end_page+1):
-        if i not in FINISHED_ID and i %4 ==mod:
+        if i not in FINISHED_ID and i %8 ==mod:
             lastlastpage = lastpage #用于判断lastpage是否更新
             req = urllib2.Request(url+str(i), None, getRandomHeaders())
             try:
