@@ -11,7 +11,7 @@ class WebPage(Document):
     time  = StringField()
     content = StringField()
 
-connect('ppdcrawler', host='127.0.0.1', port=27017)
+connect('ppdcrawler', host='172.29.33.103', port=27017)
 
 import os
 import sys
