@@ -182,4 +182,4 @@ if login():
         print 'Lastest Page',latestpage
         print 'Current Url:',ppdaiurl
         getData_ppdai(ppdaiurl, filedirectory, b_idx,e_idx,mod)
-        time.sleep(SLEEP_TIME)
+        #time.sleep(SLEEP_TIME)
