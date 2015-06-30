@@ -5,11 +5,6 @@ import sys
 
 from mongoengine import *
 
-class WebPage(Document):
-    docid = IntField()
-    valid=BooleanField()
-    time  = StringField()
-    content = StringField()
 
 connect('ppdcrawler', host='172.29.33.103', port=27017)
 
