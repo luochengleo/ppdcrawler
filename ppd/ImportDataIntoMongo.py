@@ -1,6 +1,7 @@
 #coding=utf8
 __author__ = 'luocheng'
 
+import sys
 
 from mongoengine import *
 
