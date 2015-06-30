@@ -6,6 +6,8 @@ import csv
 from bs4 import BeautifulSoup
 import socket, errno
 from tools_ppdai import *
+from mongoengine import *
+
 #import xlrd, xlwt, xlutils
 #from xlutils.copy import copy
 #import shutil
@@ -15,6 +17,12 @@ headers={'Referer':'http://www.ppdai.com/default.htm','User-Agent': 'Mozilla/5.0
 #全局变量
 rows_sheet = [2, 1, 2, 1, 1] #5个sheet当前最后一行
 writers = [] #csv writers[0-4]
+
+class WebPage(Document):
+    docid = IntField()
+    valid=BooleanField()
+    time  = StringField()
+    content = StringField()
 
 def getData_ppdai(url, filedirectory, begin_page, end_page,mod):
     global rows_sheet
@@ -114,9 +122,12 @@ def getData_ppdai(url, filedirectory, begin_page, end_page,mod):
             print('Downloading ' + str(i) + ' web page...')
 
             #保存网页文件
-            f = open(sName, 'wb')
-            f.write(m)
-            f.close()
+            wp = WebPage(docid = int(i),valid=True,time=strtime,content=str(m))
+            wp.save()
+            print 'Insert ',i,' into MongoDB'
+            # f = open(sName, 'wb')
+            # f.write(m)
+            # f.close()
 
 
     for i in range(5):
@@ -162,8 +173,7 @@ createFolder(filedirectory)
 createFolder(filedirectory+dataFolder)
 createFolder(filedirectory+userFolder)
 getProxyList()
-
-
+connect('ppdcrawler', host='172.29.33.103', port=27017)
 
 FINISHED_ID = getFinishedId()
 
