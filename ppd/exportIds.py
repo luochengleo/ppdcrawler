@@ -14,8 +14,13 @@ class WebPage(Document):
 
 connect('ppdcrawler', host='172.29.33.103', port=27017)
 
-fout = open('id.html','w')
-for w in WebPage.objects:
-    
-    fout.write(str(w.docid)+'\n')
+fout = open('id.txt','w')
+wset = WebPage.objects
+while True:
+    w = wset.next()
+    if w!=None:
+        fout.write(str(w.docid)+'\n')
+    else:
+        break
+
 fout.close()

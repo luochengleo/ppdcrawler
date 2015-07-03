@@ -1,5 +1,5 @@
 #coding=utf8
-import sys 
+import sys
 begin,end,targets = sys.argv[1:]
 if targets=='nus' or targets == 'nas':
 	style = 'win'

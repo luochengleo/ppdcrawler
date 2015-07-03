@@ -19,11 +19,10 @@ class WebPage(Document):
     time  = StringField()
     content = StringField()
 
-def getData_ppdai(url, filedirectory,taskfile):
+def getData_ppdai(url, filedirectory,mod):
     global rows_sheet
     global writers
 
-    print(u'\nSTART to get webpages from: '+str(begin_page))
     starttime = time.clock()
     lostPageCount = int(0) #记录连续404的页面个数，若该数值大于LOST_PAGE_LIMIT，则认为已录完数据
     fileCount = 0
@@ -35,35 +34,31 @@ def getData_ppdai(url, filedirectory,taskfile):
     
     tasks = list()
     finished = set()
-    lastpage = begin_page - 1 #记录抓取的最后一个有效页面
-    for l in open(str(mod)+'.task','r'):
+    for l in open('../config/'+str(mod)+'.task','r'):
         if l.strip().isdigit():
             tasks.append(int(l.strip()))
-    for l in open(str(mod)+'.finished','r'):
+    for l in open('../config/'+str(mod)+'.finished','r'):
         if l.strip().isdigit():
             finished.add(int(l.strip()))
+    lastpage = tasks[0] - 1 #记录抓取的最后一个有效页面
 
 
 
 
     _count = 0
     for i in tasks:
-        finished.add(i)
         _count +=1
-        if _count %1000 == 0:
-            _fout = open(str(mod)+'.finished','w')
+        if _count %10== 0:
+            _fout = open('../config/'+str(mod)+'.finished','w')
             for _f in finished:
                 _fout.write(str(_f)+'\n')
             _fout.close()
+            print len(finished), ' of ', len(tasks),' tasks done.'
 
         if i not in finished:
-            lastlastpage = lastpage #用于判断lastpage是否更新
             req = urllib2.Request(url+str(i), None, getRandomHeaders())
             try:
-                #response = responseFromUrl(url+str(i))
-                #req.set_proxy(proxyList[0], 'http')
                 response = urllib2.urlopen(req)
-                #部分页面会重定向到/default.html，（如400001），以此来判定
                 r = re.search(str(i), response.geturl())
                 if not r:
                     print(str(i)+': Page Redirected!')
@@ -118,11 +113,17 @@ def getData_ppdai(url, filedirectory,taskfile):
             #保存网页文件
             wp = WebPage(docid = int(i),valid=True,time=strtime,content=str(m))
             wp.save()
+            finished.add(i)
             print 'Insert ',i,' into MongoDB'
             
     endtime = time.clock()
     print(u"[file number]:"+str(fileCount))
     print(u'[execute time]:'+str(endtime - starttime))
+    _fout = open('../config/'+str(mod)+'.finished','w')
+    for _f in finished:
+        _fout.write(str(_f)+'\n')
+    _fout.close()
+    print len(finished), ' of ', len(tasks),' tasks done.'
     return
 
 
@@ -139,22 +140,17 @@ createFolder(filedirectory)
 createFolder(filedirectory+dataFolder)
 createFolder(filedirectory+userFolder)
 getProxyList()
-connect('ppdcrawler', host='172.29.33.103', port=27017)
+connect('ppdcrawler_set', host='172.29.33.103', port=27017)
 
 
 import sys
-b_idx = int(sys.argv[1])
 
-e_idx = int(sys.argv[2])
+mod = int(sys.argv[1])
 
-mod = int(sys.argv[3])
 print('Data Path: '+filedirectory)
 if login():
     #setProxy()
     tempCount = 0
-    while True:
-        latestpage = int(getLatestPage())
-        print 'Lastest Page',latestpage
-        print 'Current Url:',ppdaiurl
-        getData_ppdai(ppdaiurl, filedirectory, b_idx,e_idx,mod)
-        #time.sleep(SLEEP_TIME)
+
+    print 'Current Url:',ppdaiurl
+    getData_ppdai(ppdaiurl, filedirectory, mod)
