@@ -151,6 +151,9 @@ print('Data Path: '+filedirectory)
 if login():
     #setProxy()
     tempCount = 0
-
-    print 'Current Url:',ppdaiurl
-    getData_ppdai(ppdaiurl, filedirectory, mod)
+    while True:
+        print 'Current Url:',ppdaiurl
+        try:
+            getData_ppdai(ppdaiurl, filedirectory, mod)
+        except:
+            pass
