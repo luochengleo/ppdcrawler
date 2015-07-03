@@ -140,7 +140,7 @@ createFolder(filedirectory)
 createFolder(filedirectory+dataFolder)
 createFolder(filedirectory+userFolder)
 getProxyList()
-connect('ppdcrawler_set', host='172.29.33.103', port=27017)
+connect('ppdcrawler', host='172.29.33.103', port=27017)
 
 
 import sys
