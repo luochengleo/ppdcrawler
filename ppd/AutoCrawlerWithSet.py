@@ -5,6 +5,8 @@ import sys, string, time, os, re
 import csv
 from bs4 import BeautifulSoup
 import socket, errno
+
+import random
 from tools_ppdai import *
 from mongoengine import *
 
@@ -34,12 +36,17 @@ def getData_ppdai(url, filedirectory,mod):
     
     tasks = list()
     finished = set()
+    exception = set()
     for l in open('../config/'+str(mod)+'.task','r'):
         if l.strip().isdigit():
             tasks.append(int(l.strip()))
+    random.shuffle(tasks)
     for l in open('../config/'+str(mod)+'.finished','r'):
         if l.strip().isdigit():
             finished.add(int(l.strip()))
+    for l in open('../config/'+str(mod)+'.exception','r'):
+        if l.strip().isdigit():
+            exception.add(int(l.strip()))
     lastpage = tasks[0] - 1 #记录抓取的最后一个有效页面
 
 
@@ -55,12 +62,14 @@ def getData_ppdai(url, filedirectory,mod):
             _fout.close()
             print len(finished), ' of ', len(tasks),' tasks done.'
 
-        if i not in finished:
+        if i not in finished and i not in exception:
             req = urllib2.Request(url+str(i), None, getRandomHeaders())
             try:
                 response = urllib2.urlopen(req)
                 r = re.search(str(i), response.geturl())
                 if not r:
+                    open('../config/'+str(mod)+'.exception','a').write(str(i)+'\n')
+                    exception.add(i)
                     print(str(i)+': Page Redirected!')
                     continue
 
@@ -70,6 +79,8 @@ def getData_ppdai(url, filedirectory,mod):
                 if hasattr(e, 'code'):
                     print 'ERROR CODE',e.code
                 if hasattr(e, 'code') and e.code == 404:
+                    open('../config/'+str(mod)+'.exception','a').write(str(i)+'\n')
+                    exception.add(i)
                     lostPageCount = lostPageCount + 1
                     if(lostPageCount > LOST_PAGE_LIMIT):
                         print('YOU HAVE GOT THE LASTEST PAGE!')
@@ -78,6 +89,7 @@ def getData_ppdai(url, filedirectory,mod):
                         continue #only a few pages are lost
                 elif hasattr(e, 'code') and e.code == 403:
                     login()
+                    open('../config/'+str(mod)+'.exception','a').write(str(i)+'\n')
                     i = lastpage
                     continue
                 else:
@@ -92,10 +104,7 @@ def getData_ppdai(url, filedirectory,mod):
                 if e.errno == 10054: #被服务器端强行关闭
                     print('[ERROR] Socket was closed by the server.\n Trying to reconnect...')
                 #将最新页面写入log文件中
-                logfile = open(filedirectory+logfileName, 'wb')
-                logfile.write('LatestPage = '+str(lastpage))
-                logfile.close()
-                #等待一定时间后重新连接
+
                 time.sleep(CLOSE_WAIT_TIME)
                 login()
                 i = lastpage #重新获取最新页面

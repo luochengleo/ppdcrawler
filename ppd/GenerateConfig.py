@@ -15,5 +15,8 @@ for i in range(0,32,1):
     fout = open('../config/'+str(i)+'.finished','w')
     fout.write('\n')
     fout.close()
+    fout = open('../config/'+str(i)+'.exception','w')
+    fout.write('\n')
+    fout.close()
     open('run'+str(i%4)+'.bat','a').write('start python AutoCrawlerWithSet.py '+str(i)+'\n')
 

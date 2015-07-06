@@ -13,9 +13,14 @@ class WebPage(Document):
     content = StringField()
 
 connect('ppdcrawler', host='127.0.0.1', port=27017)
-
-for w in WebPage.objects:
-    fout = open('datas/pages2/'+str(w.docid)+'.html','w')
-    fout.write(w.content)
+count = 0
+qset =  WebPage.objects(docid__lt=1550000)
+while True:
+    w = qset.next()
     print w.docid
-    fout.close()
+
+    if w.docid > 1540000:
+        fout = open('datas/pages2/'+str(w.docid)+'.html','w')
+        fout.write(w.content)
+        print w.docid
+        fout.close()
