@@ -1,42 +1,31 @@
-#coding=utf8
-
-
 __author__ = 'luocheng'
-from bs4 import BeautifulSoup
 import time
-import re
+from bs4 import BeautifulSoup
+from bs4 import *
 
 
-def analysisUserProfileData(table):
-    if table !=None:
-        print table
 
-        alllines = list()
-        for t  in table.find_all('tr')+table.find_all('th'):
-            alllines.append(','.join([ '"'+item.get_text().strip()+'"' for item in t.find_all('td')]))
-        return alllines
-    else:
-        return []
-def analysisUserLoanList( table ):
-    if table ==None:
-        return []
-    else:
-        alllines = list()
-        for ol in table.find_all('ol'):
-            alllines.append(','.join(['"'+item.get_text().strip()+'"' for item in ol.find_all('li')]))
-        return alllines
-
-
-def analyzeData_ppdai(docid,time, webcontent):
-    # headers of table
-    #抓取时间 	订单号	安	非	赔	保	农	订单标题	金额(元）	年利率	期限（月）	还款方式	每月还款金额	进度	借款状态	剩余时间	结束时间	总投标数	浏览量	借款id	借入信用等级	借入信用分数	借出信用分数	成功次数	流标次数	身份认证	视频认证	学历认证	手机认证	借款目的	性别	年龄	婚姻状况	文化程度	住宅状况	是否购车	关于我	我想要使用这笔款项做什么	我的还款能力说明
-    data = list()
-    data.append(time)#抓取时间
-    data.append(docid)#订单号
-
+def analyzeData_ppdai(orderID, webcontent, writers):
     soup = BeautifulSoup(webcontent)
+    #print soup.__class__
+    #print(soup.original_encoding)
+    #soup.prettify()
+    #print(soup)
 
-    ##订单类型（2）:安（应收款安全标）/非（非提现标）/赔（审错就赔付标）/保（个人担保标）/农（助农计划）
+    ##————————————sheet1 begin————————————————————
+    buffer1 = []
+    ##抓取时间（0）
+    nowtime = time.localtime(time.time())
+    getdate = str(time.strftime('%Y/%m/%d', nowtime))
+    buffer1.append(getdate)
+    gettime = str(time.strftime('%H:%M:%S', nowtime))
+    buffer1.append(gettime)
+
+    ##订单号（1）
+    buffer1.append(orderID)
+
+
+    ##订单类型（2）:安（应收款安全标）/非（非体现标）/赔（审错就赔付标）/保（个人担保标）/农（助农计划）
     an = fei = pei = bao = nong = 0
     tag_an = soup.find('i', {'class':'an'})
     if tag_an:  an = 1
@@ -49,81 +38,54 @@ def analyzeData_ppdai(docid,time, webcontent):
     tag_nong = soup.find('i', {'class':'nong'})
     if tag_nong: nong = 1
 
-    data.append(an)
-    data.append(fei)
-    data.append(pei)
-    data.append(bao)
-    data.append(nong)
-
+    buffer1.append(an)
+    buffer1.append(fei)
+    buffer1.append(pei)
+    buffer1.append(bao)
+    buffer1.append(nong)
 
     #标题(3)
-    try:
-        t = soup.find('span',{'tt':re.compile('\d.*?')})
-        data.append(t.string)
-    except:
-        data.append('')
-    #用户id
-    userid = soup.find('a',{'class':'username'})
-    data.append(userid.string)
+    tag_title = soup.find('td', {'class':'list_tit'})
+    title = tag_title.find('h1').string
+    #print(title)
+    #logfile.write(title.encode('gbk')+',')
+    buffer1.append(title)
 
-    # user rating
-    try:
-        _p = re.compile('creditRating\s(\w+)')
-        match =_p.search(webcontent)
-        if match:
-            data.append( match.groups()[0])
-        else:
-            data.append('')
-    except:
-        data.append('EXCEPTION')
-    #bidinfo
+    ##金额（4）
+    tag_amount = soup.find('span', {'id':'TotalAmount'})
+    amount = re.search(r'\d+(,\d+)?', tag_amount.string)
+    if amount:
+        amount = amount.group().replace(',', '') #删除数字中的逗号
+        #logfile.write(amount+',')
+        buffer1.append(amount)
+    else:
+        #logfile.write('NA,')
+        buffer1.append('')
 
-    try:
-        bidinfo = soup.find('span',{'class':'bidinfo'})
-        data.append(bidinfo.string)
-    except:
-        data.append('EXCEPTION')
+    ##年利率（5）
+    tag_interestRate = soup.find('label', text=re.compile(u'年利率：'))
+    #print(tag_interestRate)
+    interestRate = tag_interestRate.find_next_sibling('span').string
+    interestRate = re.search(r'\d+', interestRate).group()
+    #print(interestRate)
+    buffer1.append(interestRate)
 
-    ##金额，年利率，期限
-    try:
-        loan = soup.find('div',{'class':'newLendDetailMoneyLeft'})
-        for d in loan.find_all('dd'):
-            try:
-                data.append(d.get_text())
-            except:
-                data.append('')
-    except:
-        for i in range(0,3,1):data.append('')
+    ##期限（6）
+    #tag_timeLimit = soup.find(text=re.compile(u'\w*限：'))
+    #ATTENTION!!!!!
+    tag_timeLimit = soup.find('label', text=re.compile(u'期(\u00A0)*限：'))
+    #print(tag_timeLimit.string.encode('utf-8'))
+    timeLimit = tag_timeLimit.find_next_sibling('span').string
+    timeLimit_months = re.search(r'\d+', timeLimit)
+    if timeLimit_months:
+        #logfile.write(timeLimit_months.group()+',')
+        buffer1.append(timeLimit_months.group())
+    else:
+        #logfile.write('NA,')
+        buffer1.append('')
 
-    #还款方式等信息
-    try:
-        loan = soup.find('div',{'class':'newLendDetailRefundLeft'})
-        for _d in loan.find_all('div',{'class':'item'})[0:5]:
-            text = _d.get_text()
-            data.append(''.join([item.strip() for item in text.split('\n')]))
-    except:
-        for i in xrange(5):
-            data.append('')
-    #投标状态
-    rawstatus = soup.find('div',{'class':'wrapNewLendDetailInfoRight'})
-    if rawstatus == None:
-        print 'WARNING'
-    status = ''
-    if 'newbidstatus_lb' in rawstatus.prettify():
-        status = '投标已结束'
-    if 'newbidstatus_pg' in rawstatus.prettify():
-        status = '正在评估中'
-    if 'newbidstatus_mb' in rawstatus.prettify():
-        status = '已经满标'
-    data.append(status)
+    #print(buffer1)
 
-    table = soup.find('table',{'class':'lendDetailTab_tabContent_table1'})
-    print analysisUserProfileData(table)
-
-    table = soup.find('div',{'id':'bidTable_div'})
-    print analysisUserLoanList(table)
-
-'''
     ##还款方式（7）
     p = re.compile(u'.*(，每月还款|月还息|一次还本付息).*')
     tag_refund = soup.find(text = p)
@@ -362,6 +324,7 @@ def analyzeData_ppdai(docid,time, webcontent):
 
     #将数据写入表1中
     writers[0].writerow(buffer1)
+    '''
     sheet1 = excelbook.get_sheet(0)
     col = 0
     #row = excelbook.sheet_by_index(0).nrows
@@ -371,12 +334,14 @@ def analyzeData_ppdai(docid,time, webcontent):
         col += 1
         #buffer11.append(item.decode('gbk'))
     rows_sheet[0] += 1 #行数加1
+    '''
     ##————————————sheet1 finish————————————————————
 
     ##————————————sheet2  begin————————————————————
     #sheet2 = excelbook.get_sheet(1)
     tag_investList = soup.find('th', text=re.compile(u'(\s|\n)*投标人(\s|\n)*'))
     if tag_investList:
+        '''
         lastItem = tag_investList.parent
         count = 0;
         while True:
@@ -384,6 +349,7 @@ def analyzeData_ppdai(docid,time, webcontent):
             investItem = lastItem.find_next_sibling('tr')
             lastItem = investItem
             #print(count)
+        '''
         investList = tag_investList.parent.find_next_siblings('tr')
         #print("length: "+str(len(investList)));
         #print investList
@@ -422,23 +388,3 @@ def analyzeData_ppdai(docid,time, webcontent):
             buffer2.append(invest_second)
 
             writers[1].writerow(buffer2)
-
-            col = 0
-            for item in buffer2:
-                sheet2.write(rows_sheet[1], col, item)
-                col += 1
-            rows_sheet[1] += 1
-            '''
-
-import sys
-reload(sys)
-sys.setdefaultencoding('utf8')
-import os
-
-fout = open('./datas/parser-out.csv','w')
-count = 0
-for f in os.listdir('./datas/pages3'):
-    count +=1
-
-    print count,f
-    fout.write(analyzeData_ppdai('0000','0000',open('./datas/pages3/'+f).read())+'\n')
