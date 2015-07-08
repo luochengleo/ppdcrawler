@@ -41,7 +41,14 @@ def analysisUserLoanList( table ):
     else:
         alllines = list()
         for ol in table.find_all('ol'):
-            alllines.append(','.join(['"'+item.get_text().strip()+'"' for item in ol.find_all('li')]))
+            _tag = ''
+            if 'fastbid' in ol.prettify():
+                _tag += 'FAST'
+            if 'autobid' in ol.prettify():
+                _tag+='AUTO'
+            if _tag == '':
+                _tag = 'NONE'
+            alllines.append(','.join(['"'+item.get_text().strip()+'"' for item in ol.find_all('li')])+',"'+_tag+'"')
         return alllines
 
 
@@ -150,23 +157,66 @@ def analyzeData_ppdai(docid,time, webcontent):
 
 import sys
 reload(sys)
+
 sys.setdefaultencoding('utf8')
+
+mod = int(sys.argv[1])
 import os
+from mongoengine import *
+general_out = open('./datas/extract/general_info'+str(mod)+'.csv','w')
+user_info = open('./datas/extract/user_info'+str(mod)+'.csv','w')
+bid_info = open('./datas/extract/bid_info'+str(mod)+'.csv','w')
+attr_info = open('./datas/extract/attr_info'+str(mod)+'.csv','w')
 
-general_out = open('./datas/general_info.csv','w')
-user_info = open('./datas/user_info.csv','w')
-bid_info = open('./datas/bid_info.csv','w')
-attr_info = open('./datas/attr.csv','w')
 
 
-count = 0
-for f in os.listdir('./datas/pages3'):
+class WebPage(Document):
+    docid = IntField()
+    valid=BooleanField()
+    time  = StringField()
+    content = StringField()
+'''
+count  = 0
+for f in os.listdir('./datas/pages5'):
+
     count +=1
-    loadid = '"'+str(count)+'"'
-    rtr,ut,bt,at =  analyzeData_ppdai('0000','0000',open('./datas/pages3/'+f).read())
+    if count %10==0:
+        print count
+
+    loadid = '"0000"'
+    rtr,ut,bt,at =  analyzeData_ppdai('0000','0000',open('./datas/pages5/'+f).read())
     general_out.write(rtr+'\n')
-    user_info.write('\n'.join([loadid+','+line for line in ut]))
-    bid_info.write('\n'.join([loadid+','+line for line in bt]))
-    attr_info.write('\n'.join([loadid+','+line for line in at]))
+    if len(ut)>0:
+        user_info.write('\n'.join([loadid+','+line for line in ut])+'\n')
+    if len(bt) > 0:
+        bid_info.write('\n'.join([loadid+','+line for line in bt])+'\n')
+    if len(at) > 0:
+        attr_info.write('\n'.join([loadid+','+line for line in at])+'\n')
+
+
+'''
+connect('ppdcrawler', host='172.29.33.103', port=27017)
+count = 0
+qset =  WebPage.objects()
+while True:
+    count +=1
+    if count %1000==0:
+        print count
+    w = qset.next()
+    if w ==None:
+        break
+    if count % 8 == mod:
+        try:
+            loadid = '"'+str(w.docid)+'"'
+            rtr,ut,bt,at =  analyzeData_ppdai(str(w.docid),w.time,w.content)
+            general_out.write(rtr+'\n')
+            if len(ut)>0:
+                user_info.write('\n'.join([loadid+','+line for line in ut])+'\n')
+            if len(bt) > 0:
+                bid_info.write('\n'.join([loadid+','+line for line in bt])+'\n')
+            if len(at) > 0:
+                attr_info.write('\n'.join([loadid+','+line for line in at])+'\n')
+        except:
+            print count,'exception'
 
 
