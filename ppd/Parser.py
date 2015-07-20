@@ -22,7 +22,7 @@ def analysisTab(tab):
         if c.name == 'p':
             content += c.get_text()
 
-    return [ '"'+str(k)+'",'+str(rtr[k])+'"' for k in rtr.keys()]
+    return [ '"'+str(k)+'","'+str(rtr[k])+'"' for k in rtr.keys()]
 
 def analysisUserProfileData(table):
     if table !=None:
@@ -154,6 +154,12 @@ def analyzeData_ppdai(docid,time, webcontent):
 
     return rtr_line,usertable,bidtable,attrtable
 
+def onlyExtractTab(docid,time, webcontent):
+    soup = BeautifulSoup(webcontent)
+    tab = soup.find('div',{'class':'lendDetailTab_tabContent'})
+    attrtable =  analysisTab(tab)
+
+    return attrtable
 
 import sys
 reload(sys)
@@ -163,9 +169,9 @@ sys.setdefaultencoding('utf8')
 mod = int(sys.argv[1])
 import os
 from mongoengine import *
-general_out = open('./datas/extract/general_info'+str(mod)+'.csv','w')
-user_info = open('./datas/extract/user_info'+str(mod)+'.csv','w')
-bid_info = open('./datas/extract/bid_info'+str(mod)+'.csv','w')
+#general_out = open('./datas/extract/general_info'+str(mod)+'.csv','w')
+#user_info = open('./datas/extract/user_info'+str(mod)+'.csv','w')
+#bid_info = open('./datas/extract/bid_info'+str(mod)+'.csv','w')
 attr_info = open('./datas/extract/attr_info'+str(mod)+'.csv','w')
 
 
@@ -206,6 +212,25 @@ while True:
     if w ==None:
         break
     if count % 8 == mod:
+        
+        loadid = '"'+str(w.docid)+'"'
+        at =  onlyExtractTab(str(w.docid),w.time,w.content)
+        if len(at) > 0:
+            attr_info.write('\n'.join([loadid+','+line for line in at])+'\n')
+        # except:
+        #     print count,'exception'
+'''
+connect('ppdcrawler', host='172.29.33.103', port=27017)
+count = 0
+qset =  WebPage.objects()
+while True:
+    count +=1
+    if count %1000==0:
+        print count
+    w = qset.next()
+    if w ==None:
+        break
+    if count % 8 == mod:
         try:
             loadid = '"'+str(w.docid)+'"'
             rtr,ut,bt,at =  analyzeData_ppdai(str(w.docid),w.time,w.content)
@@ -218,5 +243,5 @@ while True:
                 attr_info.write('\n'.join([loadid+','+line for line in at])+'\n')
         except:
             print count,'exception'
-
+'''
 
